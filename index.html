@@ -1,930 +1,911 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Menu, X, ChevronRight, ChevronLeft, Settings, Maximize, 
-  Cpu, Wrench, CircleDashed, MessageSquare, Send, Trophy, 
-  PlayCircle, Info, Video, Zap
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MechaVerse - Platform Pembelajaran Komponen Mekanikal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Model Viewer untuk 3D & AR -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-// --- CUSTOM HOOK FOR ANIMATION ON MOUNT ---
-const Reveal = ({ children, className = "", delay = 0, type = "fade-up" }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay + 50);
-    return () => clearTimeout(timer);
-  }, [delay]);
-  
-  const baseClass = "transition-all duration-700 ease-out";
-  const hiddenClass = {
-    "fade-up": "opacity-0 translate-y-12",
-    "fade-in": "opacity-0",
-    "zoom": "opacity-0 scale-95",
-    "slide-left": "opacity-0 -translate-x-12",
-    "slide-right": "opacity-0 translate-x-12"
-  }[type];
-  
-  const visibleClass = "opacity-100 translate-y-0 translate-x-0 scale-100";
-
-  return (
-    <div className={`${baseClass} ${isVisible ? visibleClass : hiddenClass} ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-// --- DATA DEFINITIONS ---
-const COMPONENTS_DATA = [
-  {
-    id: 'gear',
-    title: 'Gear',
-    description: 'Gear ialah komponen mekanikal yang mempunyai gigi pada lilitannya. Ia digunakan untuk memindahkan kuasa dan kelajuan putaran dari satu aci ke aci yang lain.',
-    functions: ['Memindahkan kuasa dan tork mekanikal', 'Menukar arah pergerakan putaran', 'Meningkatkan atau mengurangkan kelajuan'],
-    examples: ['Kereta', 'Mesin Gerudi', 'Jam Tangan Mekanikal'],
-    modelUrl: 'gear.glb' // GANTIKAN DENGAN model_gear.glb ANDA
-  },
-  {
-    id: 'pautan',
-    title: 'Pautan (Linkage)',
-    description: 'Komponen ini berfungsi sebagai penghubung untuk memindahkan pergerakan dari satu bahagian mesin ke bahagian yang lain secara harmoni.',
-    functions: ['Menghubungkan komponen bebas', 'Menukar satu jenis pergerakan ke pergerakan lain', 'Memindahkan daya dengan efisien'],
-    examples: ['Wiper cermin kereta', 'Lengan Robotik', 'Sistem Kunci Pintu'],
-    modelUrl: 'pautan.glb' // GANTIKAN DENGAN model_pautan.glb ANDA
-  },
-  {
-    id: 'takal',
-    title: 'Takal & Tali Sawat',
-    description: 'Takal adalah roda beralur di mana tali sawat dilalukan. Sistem ini amat berkesan memindahkan kuasa antara dua aci pada jarak yang jauh.',
-    functions: ['Memindahkan gerakan pada jarak yang jauh', 'Memudahkan beban berat diangkat', 'Beroperasi secara lebih senyap dari gear'],
-    examples: ['Mesin Jahit', 'Kren Pengangkut', 'Enjin Kenderaan'],
-    modelUrl: 'takal.glb' // GANTIKAN DENGAN model_takal.glb ANDA
-  },
-  {
-    id: 'aci_galas',
-    title: 'Aci & Galas (Shaft & Bearing)',
-    description: 'Aci memindahkan daya putaran ke bahagian lain, manakala galas (bearing) diletakkan pada aci untuk menyokongnya dan mengurangkan geseran.',
-    functions: ['Aci memindahkan kuasa putaran paksi', 'Galas meminimumkan geseran semasa putaran', 'Menyokong integriti struktur bergerak'],
-    examples: ['Roda Basikal', 'Kipas Angin', 'Motor Elektrik'],
-    modelUrl: 'aci.glb' // GANTIKAN DENGAN model_aci_galas.glb ANDA
-  }
-];
-
-// PAGE ORDER & MENU DEFINITIONS
-const PAGE_ORDER = ['utama', 'pengenalan', 'komponen', 'aplikasi', 'gamifikasi', 'cikgu-ai', 'maklumat'];
-const MENU_ITEMS = [
-  { id: 'utama', label: 'Utama' },
-  { id: 'pengenalan', label: 'Pengenalan' },
-  { id: 'komponen', label: 'Komponen' },
-  { id: 'aplikasi', label: 'Aplikasi' },
-  { id: 'gamifikasi', label: 'Gamifikasi' },
-  { id: 'cikgu-ai', label: 'Cikgu AI' },
-  { id: 'maklumat', label: 'Maklumat' }
-];
-
-// --- MAIN APPLICATION COMPONENT ---
-export default function App() {
-  const [currentPage, setCurrentPage] = useState('utama');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-
-  // Scroll to top when page changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
-
-  // Load Google Model Viewer Script dynamically
-  useEffect(() => {
-    if (!document.querySelector('script[src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"]')) {
-      const script = document.createElement('script');
-      script.type = 'module';
-      script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js';
-      document.head.appendChild(script);
-    }
-
-    const handleMouseMove = (e) => {
-      setCursorPos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  const navigateTo = (pageId) => {
-    setCurrentPage(pageId);
-    setIsMenuOpen(false);
-  };
-
-  const currentIndex = PAGE_ORDER.indexOf(currentPage);
-  const prevPage = currentIndex > 0 ? PAGE_ORDER[currentIndex - 1] : null;
-  const nextPage = currentIndex < PAGE_ORDER.length - 1 ? PAGE_ORDER[currentIndex + 1] : null;
-
-  return (
-    <div className="min-h-screen bg-[#0a0f1c] text-slate-200 font-sans overflow-x-hidden selection:bg-orange-500/30 flex flex-col">
-      <style>{`
+    <style>
+        /* Custom CSS */
+        body { background-color: #0a0f1c; color: #e2e8f0; }
+        
         .glass-panel {
-          background: rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
         .text-glow { text-shadow: 0 0 20px rgba(249, 115, 22, 0.5); }
         .box-glow { box-shadow: 0 0 30px rgba(249, 115, 22, 0.15); }
         .gradient-text {
-          background: linear-gradient(to right, #f97316, #fb923c);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+            background: linear-gradient(to right, #f97316, #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .bg-grid {
-          background-size: 50px 50px;
-          background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
         }
+        
+        /* Model Viewer Settings */
         model-viewer {
-          width: 100%;
-          height: 400px;
-          --poster-color: transparent;
-          background-color: transparent;
+            width: 100%;
+            height: 400px;
+            --poster-color: transparent;
+            background-color: transparent;
         }
+        
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0f1c; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #f97316; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        
+        /* Animations */
         @keyframes spin-slow { 100% { transform: rotate(360deg); } }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
         .animate-spin-slow { animation: spin-slow 20s linear infinite; }
         .animate-float { animation: float 6s ease-in-out infinite; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-      `}</style>
+        
+        /* Custom Reveal Animation Classes */
+        .reveal-item {
+            opacity: 0;
+            transition: all 0.7s ease-out;
+        }
+        .reveal-fade-up { transform: translateY(3rem); }
+        .reveal-slide-left { transform: translateX(-3rem); }
+        .reveal-slide-right { transform: translateX(3rem); }
+        .reveal-zoom { transform: scale(0.95); }
+        
+        .reveal-item.is-visible {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1);
+        }
 
-      {/* Custom Cursor Glow */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-0 opacity-40 transition-opacity duration-300 hidden md:block"
-        style={{ background: `radial-gradient(600px circle at ${cursorPos.x}px ${cursorPos.y}px, rgba(249, 115, 22, 0.08), transparent 40%)` }}
-      />
+        /* Page Routing (Hide all by default except active) */
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="font-sans overflow-x-hidden selection:bg-orange-500/30 flex flex-col min-h-screen relative">
 
-      {/* Floating Background Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-         <Settings className="absolute top-[10%] left-[5%] w-64 h-64 text-slate-700/50 animate-spin-slow" />
-         <Settings className="absolute bottom-[20%] right-[10%] w-96 h-96 text-slate-700/50 animate-spin-slow" style={{ animationDirection: 'reverse', animationDuration: '30s' }} />
-      </div>
+    <!-- AUDIO BACKGROUND -->
+    <!-- GANTIKAN PAUTAN src DI BAWAH DENGAN FILE .mp3 ANDA -->
+    <audio id="bg-music" loop autoplay>
+        <source src="lagu.mp3" type="audio/mpeg">
+        Pelayar anda tidak menyokong elemen audio.
+    </audio>
 
-      {/* NAVBAR */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0f1c] shadow-lg border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <div className="flex-shrink-0 flex items-center gap-3 cursor-pointer" onClick={() => navigateTo('utama')}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center box-glow">
-                <Settings className="text-white w-6 h-6 animate-spin-slow" />
-              </div>
-              <span className="font-bold text-2xl tracking-wider text-white">Mecha<span className="text-orange-500">Verse</span></span>
+    <!-- Custom Cursor Glow -->
+    <div id="cursor-glow" class="fixed inset-0 pointer-events-none z-0 opacity-40 transition-opacity duration-300 hidden md:block" style="background: radial-gradient(600px circle at 0px 0px, rgba(249, 115, 22, 0.08), transparent 40%)"></div>
+
+    <!-- Floating Background Elements -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <i data-lucide="settings" class="absolute top-[10%] left-[5%] w-64 h-64 text-slate-700/50 animate-spin-slow"></i>
+        <i data-lucide="settings" class="absolute bottom-[20%] right-[10%] w-96 h-96 text-slate-700/50 animate-spin-slow" style="animation-direction: reverse; animation-duration: 30s;"></i>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-[#0a0f1c] shadow-lg border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="navigateTo('utama')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center box-glow">
+                        <i data-lucide="settings" class="text-white w-6 h-6 animate-spin-slow"></i>
+                    </div>
+                    <span class="font-bold text-2xl tracking-wider text-white">Mecha<span class="text-orange-500">Verse</span></span>
+                </div>
+                
+                <!-- Menu Toggle Button -->
+                <button id="menu-btn" class="p-3 rounded-xl transition-all duration-300 focus:outline-none glass-panel text-slate-300 hover:text-orange-400 hover:bg-white/10" aria-label="Toggle Menu">
+                    <i data-lucide="settings" id="menu-icon" class="w-6 h-6"></i>
+                </button>
             </div>
-            
-            {/* Menu Toggle Button (Gear Icon) */}
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className={`p-3 rounded-xl transition-all duration-300 focus:outline-none ${isMenuOpen ? 'bg-orange-500 box-glow text-white' : 'glass-panel text-slate-300 hover:text-orange-400 hover:bg-white/10'}`}
-              aria-label="Toggle Menu"
-            >
-              <Settings className={`w-6 h-6 ${isMenuOpen ? 'animate-spin' : ''}`} />
+        </div>
+
+        <!-- Fullscreen Overlay Menu -->
+        <div id="mobile-menu" class="fixed inset-0 bg-[#0a0f1c]/95 backdrop-blur-xl z-40 transition-all duration-500 flex flex-col justify-center items-center opacity-0 invisible pointer-events-none">
+            <div class="w-full max-w-md px-6 space-y-4">
+                <button onclick="navigateTo('utama')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 0ms; transform: translateY(20px);">Utama</button>
+                <button onclick="navigateTo('pengenalan')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 50ms; transform: translateY(20px);">Pengenalan</button>
+                <button onclick="navigateTo('komponen')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 100ms; transform: translateY(20px);">Komponen</button>
+                <button onclick="navigateTo('aplikasi')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 150ms; transform: translateY(20px);">Aplikasi</button>
+                <button onclick="navigateTo('gamifikasi')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 200ms; transform: translateY(20px);">Gamifikasi</button>
+                <button onclick="navigateTo('cikgu-ai')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 250ms; transform: translateY(20px);">Cikgu AI</button>
+                <button onclick="navigateTo('maklumat')" class="menu-item w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 glass-panel text-slate-400 hover:text-white hover:border-orange-500/50" style="transition-delay: 300ms; transform: translateY(20px);">Maklumat</button>
+            </div>
+            <button id="close-menu-btn" class="absolute top-6 right-6 p-3 rounded-full bg-white/10 text-white hover:bg-orange-500 hover:rotate-90 transition-all duration-300">
+                <i data-lucide="x" class="w-6 h-6"></i>
             </button>
-          </div>
         </div>
+    </nav>
 
-        {/* Fullscreen Overlay Menu */}
-        <div className={`fixed inset-0 bg-[#0a0f1c]/95 backdrop-blur-xl z-40 transition-all duration-500 flex flex-col justify-center items-center ${isMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-          <div className="w-full max-w-md px-6 space-y-4">
-            {MENU_ITEMS.map((item, idx) => (
-              <button 
-                key={item.id}
-                onClick={() => navigateTo(item.id)}
-                className={`w-full py-4 text-center rounded-2xl text-xl font-bold tracking-wider uppercase transition-all duration-300 ${currentPage === item.id ? 'bg-orange-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.4)] scale-105' : 'glass-panel text-slate-400 hover:text-white hover:border-orange-500/50'}`}
-                style={{ transitionDelay: `${idx * 50}ms`, transform: isMenuOpen ? 'translateY(0)' : 'translateY(20px)', opacity: isMenuOpen ? 1 : 0 }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <button 
-            onClick={() => setIsMenuOpen(false)}
-            className="absolute top-6 right-6 p-3 rounded-full bg-white/10 text-white hover:bg-orange-500 hover:rotate-90 transition-all duration-300"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-      </nav>
-
-      {/* PAGE CONTENT */}
-      <main className="relative z-10 pt-28 pb-10 flex-grow flex flex-col bg-grid">
-        <div className="flex-grow">
-          {currentPage === 'utama' && <UtamaPage navigateTo={navigateTo} />}
-          {currentPage === 'pengenalan' && <PengenalanPage />}
-          {currentPage === 'komponen' && <KomponenPage />}
-          {currentPage === 'aplikasi' && <AplikasiPage />}
-          {currentPage === 'gamifikasi' && <GamifikasiPage />}
-          {currentPage === 'cikgu-ai' && <CikguAIPage />}
-          {currentPage === 'maklumat' && <TentangPage />}
-        </div>
-
-        {/* BOTTOM NAVIGATION (KEMBALI & SETERUSNYA) */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-16 mb-8 relative z-20">
-          <div className="flex items-center justify-between glass-panel p-4 rounded-2xl border-slate-700/50">
-            <div>
-              {prevPage ? (
-                <button 
-                  onClick={() => navigateTo(prevPage)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-medium"
-                >
-                  <ChevronLeft className="w-5 h-5" /> Kembali
-                </button>
-              ) : <div className="w-24"></div>}
-            </div>
+    <!-- MAIN CONTENT -->
+    <main class="relative z-10 pt-28 pb-10 flex-grow flex flex-col bg-grid w-full">
+        <div class="flex-grow w-full">
             
-            {/* Page Indicator */}
-            <div className="flex gap-2 hidden sm:flex">
-              {PAGE_ORDER.map((page, idx) => (
-                <div key={page} className={`w-2 h-2 rounded-full transition-all duration-300 ${currentPage === page ? 'w-6 bg-orange-500 box-glow' : 'bg-slate-700'}`}></div>
-              ))}
-            </div>
-
-            <div>
-              {nextPage ? (
-                <button 
-                  onClick={() => navigateTo(nextPage)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all duration-300 font-bold hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]"
-                >
-                  Seterusnya <ChevronRight className="w-5 h-5" />
-                </button>
-              ) : <div className="w-32"></div>}
-            </div>
-          </div>
-        </div>
-
-        {/* GLOBAL FOOTER */}
-        <Footer />
-      </main>
-    </div>
-  );
-}
-
-// --- GLOBAL COMPONENTS ---
-function Footer() {
-  return (
-    <div className="text-center mt-12 pt-8 border-t border-slate-800/50 text-slate-500 text-sm relative z-20 pb-4">
-      <p>© {new Date().getFullYear()} MechaVerse. Hak Cipta Terpelihara.</p>
-      <div className="mt-4 text-xs leading-relaxed space-y-1 text-slate-400">
-        <p>Dibangunkan oleh Ayu Nazira binti Dzulkefli</p>
-        <p>Fakulti Teknikal Dan Vokasional</p>
-        <p>Universiti Pendidikan Sultan Idris</p>
-      </div>
-    </div>
-  );
-}
-
-// --- INDIVIDUAL PAGE COMPONENTS ---
-
-function UtamaPage({ navigateTo }) {
-  const stations = [
-    {
-      id: 'pengenalan', title: 'Pengenalan',
-      icon: (
-        <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-3">
-          <div className="absolute inset-0 bg-blue-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
-          <div className="relative w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
-            <Info className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" strokeWidth={2.5} />
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'komponen', title: 'Eksplorasi Komponen',
-      icon: (
-        <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-3">
-          <div className="absolute inset-0 bg-orange-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
-          <div className="relative w-full h-full bg-gradient-to-br from-orange-400 via-orange-500 to-orange-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
-            <Settings className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" strokeWidth={2.5} />
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'aplikasi', title: 'Aplikasi Sistem',
-      icon: (
-        <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-3">
-          <div className="absolute inset-0 bg-green-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
-          <div className="relative w-full h-full bg-gradient-to-br from-green-400 via-green-500 to-green-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
-            <Cpu className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" strokeWidth={2.5} />
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'gamifikasi', title: 'Gamifikasi',
-      icon: (
-        <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-3">
-          <div className="absolute inset-0 bg-yellow-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
-          <div className="relative w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-700 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.6),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
-            <Trophy className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" strokeWidth={2.5} />
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'cikgu-ai', title: 'Cikgu AI',
-      icon: (
-        <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-3">
-          <div className="absolute inset-0 bg-purple-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
-          <div className="relative w-full h-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
-            <MessageSquare className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" strokeWidth={2.5} />
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'maklumat', title: 'Maklumat',
-      icon: (
-        <div className="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-3">
-          <div className="absolute inset-0 bg-slate-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
-          <div className="relative w-full h-full bg-gradient-to-br from-slate-400 via-slate-500 to-slate-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
-            <Wrench className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]" strokeWidth={2.5} />
-          </div>
-        </div>
-      )
-    }
-  ];
-
-  return (
-    <div className="w-full">
-      {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[70vh] flex items-center pt-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
-          <Reveal type="slide-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-400 text-sm mb-6 uppercase tracking-wider font-semibold">
-              <Zap className="w-4 h-4" /> RBT Tingkatan 2
-            </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
-              Platform Interaktif <br/>
-              <span className="gradient-text text-glow">Komponen Mekanikal</span>
-            </h1>
-            <p className="text-lg md:text-xl text-slate-400 mb-8 max-w-xl leading-relaxed">
-              Terokai dunia sistem mekanikal melalui pembelajaran interaktif, visualisasi model 3D berkualiti tinggi dan pengalaman Augmented Reality (AR) yang imersif.
-            </p>
+            <!-- 1. HALAMAN UTAMA -->
+            <section id="utama" class="page-section active w-full">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[70vh] flex flex-col justify-center pt-10 pb-16">
+                    <div class="grid lg:grid-cols-2 gap-12 items-center w-full">
+                        <div class="reveal-item reveal-slide-left flex flex-col items-start text-left w-full">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-400 text-sm mb-6 uppercase tracking-wider font-semibold">
+                                <i data-lucide="zap" class="w-4 h-4"></i> RBT Tingkatan 2
+                            </div>
+                            <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
+                                Platform Interaktif <br/>
+                                <span class="gradient-text text-glow">Komponen Mekanikal</span>
+                            </h1>
+                            <p class="text-lg md:text-xl text-slate-400 mb-8 max-w-xl leading-relaxed">
+                                Terokai dunia sistem mekanikal melalui pembelajaran interaktif, visualisasi model 3D berkualiti tinggi dan pengalaman Augmented Reality (AR) yang imersif.
+                            </p>
+                            <div class="flex flex-wrap gap-4 w-full">
+                                <button onclick="navigateTo('pengenalan')" class="px-8 py-4 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg flex items-center gap-3 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(249,115,22,0.4)]">
+                                    <i data-lucide="play-circle" class="w-6 h-6"></i> Mulakan Pembelajaran
+                                </button>
+                            </div>
+                        </div>
             
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={() => navigateTo('pengenalan')}
-                className="px-8 py-4 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg flex items-center gap-3 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(249,115,22,0.4)]"
-              >
-                <PlayCircle className="w-6 h-6" /> Mulakan Pembelajaran
-              </button>
-            </div>
-          </Reveal>
-
-          <Reveal type="zoom" delay={200} className="relative w-full">
-            {/* MP4 Video Player with glowing border */}
-            <div className="relative z-10 w-full aspect-video glass-panel border-2 border-orange-500/50 rounded-2xl overflow-hidden box-glow group">
-               {/* Fallback pattern/gradient if video doesn't load immediately */}
-               <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 opacity-80 -z-10"></div>
-
-               <video 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline 
-                  className="w-full h-full object-cover relative z-10 opacity-90 group-hover:opacity-100 transition-opacity duration-500"
-               >
-                  {/* GANTIKAN PAUTAN DI BAWAH DENGAN video_utama.mp4 ANDA */}
-                  <source src="video-utama.mp4" />
-                  Pelayar anda tidak menyokong tag video ini.
-               </video>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-
-      {/* Stesen Pembelajaran Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 mt-10">
-        <Reveal>
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Pilih <span className="text-orange-500">Stesen Pembelajaran</span></h2>
-            <div className="w-24 h-1 bg-orange-500 mx-auto rounded-full box-glow"></div>
-          </div>
-        </Reveal>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-8">
-          {stations.map((station, idx) => (
-            <Reveal key={station.id} delay={idx * 100} type="fade-up">
-              <button
-                onClick={() => navigateTo(station.id)}
-                className="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg"
-              >
-                {station.icon}
-                <span className="font-bold text-white tracking-wide text-sm md:text-lg text-center">{station.title}</span>
-              </button>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PengenalanPage() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Reveal>
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Pengenalan <span className="text-orange-500">Sistem Mekanikal</span></h2>
-          <div className="w-24 h-1 bg-orange-500 mx-auto rounded-full box-glow"></div>
-        </div>
-      </Reveal>
-
-      <Reveal type="zoom" delay={100} className="relative w-full max-w-4xl mx-auto mb-16">
-        {/* MP4 Video Player with glowing border */}
-        <div className="relative z-10 w-full aspect-video glass-panel border-2 border-orange-500/50 rounded-2xl overflow-hidden box-glow group">
-           {/* Fallback pattern/gradient if video doesn't load immediately */}
-           <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 opacity-80 -z-10"></div>
-
-           <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline 
-              className="w-full h-full object-cover relative z-10 opacity-90 group-hover:opacity-100 transition-opacity duration-500"
-           >
-              {/* GANTIKAN PAUTAN DI BAWAH DENGAN video_pengenalan.mp4 ANDA */}
-              <source src="video-pengenalan.mp4" type="video/mp4" />
-              Pelayar anda tidak menyokong tag video ini.
-           </video>
-        </div>
-      </Reveal>
-
-      <div className="grid md:grid-cols-2 gap-12 items-center">
-        <Reveal type="slide-left">
-          <div className="glass-panel p-8 rounded-3xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-bl-full blur-2xl"></div>
-            <h3 className="text-2xl font-bold mb-4 flex items-center gap-3">
-              <Info className="text-orange-500" /> Apa Itu Sistem Mekanikal?
-            </h3>
-            <p className="text-slate-300 leading-relaxed mb-6">
-              Sistem mekanikal ialah gabungan beberapa komponen yang berfungsi untuk memindahkan daya, mengubah arah pergerakan, mengubah kelajuan pergerakan atau menghasilkan sesuatu pergerakan yang dikehendaki.
-            </p>
-            <p className="text-slate-300 leading-relaxed">
-              Setiap komponen mempunyai fungsi tersendiri dan bekerja secara sinergi untuk menghasilkan gerakan yang cekap bagi memudahkan kehidupan manusia.
-            </p>
-          </div>
-        </Reveal>
-
-        <Reveal type="slide-right" delay={200}>
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold mb-6 text-orange-400">Kepentingan Utama</h3>
-            {[
-              { title: "Pemindahan Daya", desc: "Membantu memindahkan tenaga dan daya dengan efisien." },
-              { title: "Beban Kerja", desc: "Memudahkan kerja manusia dalam aktiviti harian." },
-              { title: "Kecekapan Tenaga", desc: "Meningkatkan kecekapan penggunaan tenaga mesin." }
-            ].map((item, idx) => (
-              <div key={idx} className="glass-panel p-5 rounded-2xl flex items-start gap-4 transform transition-all duration-300 hover:-translate-x-2 hover:border-orange-500/30">
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
-                  <span className="text-orange-500 font-bold">{idx + 1}</span>
+                        <div class="reveal-item reveal-zoom relative w-full" style="transition-delay: 200ms;">
+                            <div class="relative z-10 w-full aspect-video glass-panel border-2 border-orange-500/50 rounded-2xl overflow-hidden box-glow group">
+                               <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 opacity-80 -z-10"></div>
+                               <video autoplay loop muted playsinline class="w-full h-full object-cover relative z-10 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+                                  <!-- GANTIKAN PAUTAN DI BAWAH DENGAN video_utama.mp4 ANDA -->
+                                  <source src="video-utama.mp4" type="video/mp4" />
+                                  Pelayar anda tidak menyokong tag video ini.
+                               </video>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-lg text-slate-100">{item.title}</h4>
-                  <p className="text-sm text-slate-400 mt-1">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </div>
-    </div>
-  );
-}
-
-function KomponenPage() {
-  const [isMobile, setIsMobile] = useState(false);
-  const [qrCodeFor, setQrCodeFor] = useState(null);
-
-  useEffect(() => {
-    // Pengesanan mudah alih atau desktop
-    const checkMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    setIsMobile(checkMobile());
-    
-    const handleResize = () => setIsMobile(checkMobile());
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Reveal>
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Eksplorasi <span className="text-orange-500">Komponen</span></h2>
-          <p className="text-slate-300 mt-4 max-w-3xl mx-auto text-base md:text-lg leading-relaxed">Teruskan ke bahagian bawah untuk meneroka nota pembelajaran, memahami fungsi setiap komponen serta berinteraksi dengan model 3D dan teknologi Augmented Reality (AR) bagi pengalaman pembelajaran yang lebih interaktif.</p>
-        </div>
-      </Reveal>
-
-      {/* Component Stack View */}
-      <div className="space-y-16">
-        {COMPONENTS_DATA.map((comp, index) => (
-          <Reveal key={comp.id} delay={index * 150} type="fade-up">
-            <div className="glass-panel rounded-3xl p-6 lg:p-10 border border-slate-700/50 grid lg:grid-cols-2 gap-10">
-              
-              {/* Left: Info */}
-              <div className="flex flex-col justify-center space-y-8">
-                <div>
-                  <h3 className="text-4xl font-bold mb-4 text-white flex items-center gap-4">
-                    {comp.title}
-                    <span className="text-xs px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30 flex items-center gap-1 font-normal tracking-wide">
-                      <Maximize className="w-3 h-3"/> AR Sedia
-                    </span>
-                  </h3>
-                  <p className="text-lg text-slate-300 leading-relaxed bg-slate-800/30 p-4 rounded-xl border-l-4 border-orange-500">
-                    {comp.description}
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="text-xl font-semibold mb-4 text-orange-400 flex items-center gap-2">
-                    <Settings className="w-5 h-5"/> Fungsi Utama
-                  </h4>
-                  <ul className="space-y-3">
-                    {comp.functions.map((func, idx) => (
-                      <li key={idx} className="flex items-start gap-3 text-slate-300 group">
-                        <ChevronRight className="w-5 h-5 text-orange-500 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-                        <span>{func}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Right: 3D Viewer */}
-              <div className="relative bg-slate-950/80 rounded-2xl border border-slate-700/50 overflow-hidden min-h-[450px] flex flex-col group">
-                <div className="absolute top-4 left-4 z-10 flex gap-2">
-                  <div className="px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg text-xs font-bold text-orange-400 border border-orange-500/30 animate-pulse">360° View</div>
-                </div>
-
-                {React.createElement('model-viewer', {
-                  src: comp.modelUrl,
-                  alt: `Model 3D ${comp.title}`,
-                  ar: true,
-                  'ar-modes': "webxr scene-viewer quick-look",
-                  'camera-controls': true,
-                  'auto-rotate': true,
-                  'rotation-per-second': '10deg',
-                  'shadow-intensity': "1",
-                  exposure: "1.5",
-                  'environment-image': 'neutral',
-                  style: { flexGrow: 1, width: '100%', position: 'relative' }
-                }, 
-                  // Paparan QR untuk pengguna Desktop
-                  qrCodeFor === comp.id && !isMobile && React.createElement('div', {
-                    className: "absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center"
-                  },
-                    React.createElement('div', { className: "bg-white p-3 rounded-xl mb-4 shadow-[0_0_30px_rgba(249,115,22,0.3)]" },
-                      React.createElement('img', { 
-                        src: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}`, 
-                        alt: "QR Code AR", 
-                        className: "w-40 h-40" 
-                      })
-                    ),
-                    React.createElement('h4', { className: "font-bold text-xl text-white mb-2 flex items-center justify-center gap-2" }, 
-                      React.createElement(Maximize, {className: "w-6 h-6 text-orange-500"}), "Paparan AR"
-                    ),
-                    React.createElement('p', { className: "text-slate-300 max-w-sm mb-6 leading-relaxed text-sm" }, 
-                      "Imbas kod QR ini menggunakan kamera telefon pintar atau tablet anda untuk melihat model 3D ini dalam ruang sebenar."
-                    ),
-                    React.createElement('button', { 
-                      onClick: () => setQrCodeFor(null), 
-                      className: "px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-full transition-colors border border-slate-600 text-sm" 
-                    }, "Kembali ke 3D View")
-                  ),
-
-                  // Bekas Butang (Di bawah Model)
-                  React.createElement('div', { className: 'absolute bottom-6 w-full flex justify-center gap-3 z-20 px-4 pointer-events-none' },
+            
+                <!-- Stesen Pembelajaran Cards -->
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 mt-10">
+                    <div class="reveal-item reveal-fade-up text-center mb-12">
+                        <h2 class="text-3xl font-bold mb-4">Pilih <span class="text-orange-500">Stesen Pembelajaran</span></h2>
+                        <div class="w-24 h-1 bg-orange-500 mx-auto rounded-full box-glow"></div>
+                    </div>
                     
-                    // Butang 3D VIEW
-                    React.createElement('button', {
-                       onClick: () => setQrCodeFor(null),
-                       className: `pointer-events-auto px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg flex-1 md:flex-none md:w-[160px] flex justify-center items-center ${qrCodeFor !== comp.id ? 'bg-slate-800 text-white border border-orange-500/50 box-glow' : 'bg-slate-900/80 text-slate-400 border border-slate-700 backdrop-blur-sm'}`
-                    }, "3D VIEW"),
-
-                    // Butang AR VIEW (Khas Desktop)
-                    !isMobile && React.createElement('button', {
-                       onClick: () => setQrCodeFor(comp.id),
-                       className: `pointer-events-auto px-6 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg flex-1 md:flex-none md:w-[160px] ${qrCodeFor === comp.id ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]' : 'bg-slate-800/80 backdrop-blur-sm text-white hover:bg-slate-700 border border-slate-700'}`
-                    }, React.createElement(Maximize, {className: "w-4 h-4"}), "AR VIEW"),
-
-                    // Butang AR VIEW Natively (Khas Mudah Alih menggunakan fungsi slot)
-                    isMobile && React.createElement('button', {
-                       slot: "ar-button",
-                       className: `pointer-events-auto px-6 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] flex-1`
-                    }, React.createElement(Maximize, {className: "w-4 h-4"}), "AR VIEW")
-                  )
-                )}
-
-                <div className="bg-gradient-to-br from-slate-800/95 to-slate-900/95 p-6 border-t-2 border-orange-500/50 relative z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] backdrop-blur-md">
-                  <h5 className="text-lg md:text-xl font-bold text-white mb-4 tracking-wide flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-orange-500" /> Contoh Aplikasi Sistem
-                  </h5>
-                  <ul className="flex flex-col space-y-3">
-                    {comp.examples.map((ex, idx) => (
-                      <li key={idx} className="flex items-center gap-3 text-slate-100 text-base md:text-lg font-medium">
-                        <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]"></span>
-                        {ex}
-                      </li>
-                    ))}
-                  </ul>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-8">
+                        <!-- Card 1 -->
+                        <div class="reveal-item reveal-fade-up" style="transition-delay: 0ms;">
+                            <button onclick="navigateTo('pengenalan')" class="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg">
+                                <div class="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-3">
+                                    <div class="absolute inset-0 bg-blue-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
+                                    <div class="relative w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
+                                        <i data-lucide="info" class="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"></i>
+                                    </div>
+                                </div>
+                                <span class="font-bold text-white tracking-wide text-sm md:text-lg text-center">Pengenalan</span>
+                            </button>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="reveal-item reveal-fade-up" style="transition-delay: 100ms;">
+                            <button onclick="navigateTo('komponen')" class="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg">
+                                <div class="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-3">
+                                    <div class="absolute inset-0 bg-orange-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
+                                    <div class="relative w-full h-full bg-gradient-to-br from-orange-400 via-orange-500 to-orange-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
+                                        <i data-lucide="settings" class="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"></i>
+                                    </div>
+                                </div>
+                                <span class="font-bold text-white tracking-wide text-sm md:text-lg text-center">Eksplorasi Komponen</span>
+                            </button>
+                        </div>
+                        <!-- Card 3 -->
+                        <div class="reveal-item reveal-fade-up" style="transition-delay: 200ms;">
+                            <button onclick="navigateTo('aplikasi')" class="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg">
+                                <div class="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-3">
+                                    <div class="absolute inset-0 bg-green-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
+                                    <div class="relative w-full h-full bg-gradient-to-br from-green-400 via-green-500 to-green-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
+                                        <i data-lucide="cpu" class="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"></i>
+                                    </div>
+                                </div>
+                                <span class="font-bold text-white tracking-wide text-sm md:text-lg text-center">Aplikasi Sistem</span>
+                            </button>
+                        </div>
+                        <!-- Card 4 -->
+                        <div class="reveal-item reveal-fade-up" style="transition-delay: 300ms;">
+                            <button onclick="navigateTo('gamifikasi')" class="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg">
+                                <div class="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-3">
+                                    <div class="absolute inset-0 bg-yellow-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
+                                    <div class="relative w-full h-full bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-700 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.6),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
+                                        <i data-lucide="trophy" class="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"></i>
+                                    </div>
+                                </div>
+                                <span class="font-bold text-white tracking-wide text-sm md:text-lg text-center">Gamifikasi</span>
+                            </button>
+                        </div>
+                        <!-- Card 5 -->
+                        <div class="reveal-item reveal-fade-up" style="transition-delay: 400ms;">
+                            <button onclick="navigateTo('cikgu-ai')" class="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg">
+                                <div class="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:rotate-3">
+                                    <div class="absolute inset-0 bg-purple-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
+                                    <div class="relative w-full h-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
+                                        <i data-lucide="message-square" class="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"></i>
+                                    </div>
+                                </div>
+                                <span class="font-bold text-white tracking-wide text-sm md:text-lg text-center">Cikgu AI</span>
+                            </button>
+                        </div>
+                        <!-- Card 6 -->
+                        <div class="reveal-item reveal-fade-up" style="transition-delay: 500ms;">
+                            <button onclick="navigateTo('maklumat')" class="w-full h-full glass-panel p-6 rounded-3xl flex flex-col items-center justify-center gap-6 hover:-translate-y-2 hover:bg-slate-800/80 transition-all duration-300 group border border-slate-700/50 hover:border-orange-500/50 shadow-lg">
+                                <div class="relative w-16 h-16 md:w-20 md:h-20 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2 group-hover:-rotate-3">
+                                    <div class="absolute inset-0 bg-slate-500 blur-xl opacity-40 rounded-full group-hover:opacity-70 transition-opacity"></div>
+                                    <div class="relative w-full h-full bg-gradient-to-br from-slate-400 via-slate-500 to-slate-800 rounded-2xl flex items-center justify-center shadow-[0_15px_25px_rgba(0,0,0,0.4),inset_0_4px_6px_rgba(255,255,255,0.5),inset_0_-4px_6px_rgba(0,0,0,0.3)] border border-white/20">
+                                        <i data-lucide="wrench" class="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"></i>
+                                    </div>
+                                </div>
+                                <span class="font-bold text-white tracking-wide text-sm md:text-lg text-center">Maklumat</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-              </div>
+            </section>
 
-            </div>
-          </Reveal>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AplikasiPage() {
-  const applications = [
-    { 
-      name: 'Basikal', 
-      parts: ['Gear', 'Rantai', 'Sproket'], 
-      func: 'Membantu memindahkan kuasa kayuhan kepada roda belakang secara efisien untuk pergerakan.',
-      modelUrl: 'basikal.glb' // GANTIKAN DENGAN aplikasi_basikal.glb ANDA
-    },
-    { 
-      name: 'Mesin Jahit', 
-      parts: ['Gear', 'Takal'], 
-      func: 'Menggerakkan jarum jahitan secara berterusan dengan ritma yang seragam ke atas dan ke bawah.',
-      modelUrl: 'mesin.glb' // GANTIKAN DENGAN aplikasi_mesin_jahit.glb ANDA
-    },
-    { 
-      name: 'Pengisar', 
-      parts: ['Aci', 'Gear'], 
-      func: 'Memutarkan bilah pemotong pada kelajuan tinggi untuk memproses dan menghancurkan makanan.',
-      modelUrl: 'pengisar.glb' // GANTIKAN DENGAN aplikasi_pengisar.glb ANDA
-    },
-    { 
-      name: 'Jam Mekanikal', 
-      parts: ['Gear'], 
-      func: 'Mengawal pergerakan jarum jam dengan ketepatan tinggi melalui susunan sistem gear yang kompleks.',
-      modelUrl: 'jam.glb' // GANTIKAN DENGAN aplikasi_jam.glb ANDA
-    }
-  ];
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-
-      <Reveal>
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Aplikasi <span className="text-blue-400">Sistem Mekanikal</span></h2>
-          <div className="w-24 h-1 bg-blue-500 mx-auto rounded-full box-glow"></div>
-          <p className="text-slate-300 mt-4 max-w-2xl mx-auto text-lg leading-relaxed">Terokai bagaimana gabungan komponen mekanikal menghasilkan sistem yang berfungsi dengan cekap dalam pelbagai produk harian.</p>
-        </div>
-      </Reveal>
-
-      <div className="grid md:grid-cols-2 gap-10">
-        {applications.map((app, index) => (
-          <Reveal key={index} delay={index * 150} type="fade-up">
-            <div className="glass-panel p-6 lg:p-8 rounded-3xl h-full flex flex-col group hover:bg-slate-800/80 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-2 shadow-xl border border-slate-700">
+            <!-- 2. HALAMAN PENGENALAN -->
+            <section id="pengenalan" class="page-section w-full">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="reveal-item reveal-fade-up text-center mb-16">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Pengenalan <span class="text-orange-500">Sistem Mekanikal</span></h2>
+                        <div class="w-24 h-1 bg-orange-500 mx-auto rounded-full box-glow"></div>
+                    </div>
               
-              {/* Ruang Gambar/Model 3D (.glb) */}
-              <div className="w-full h-64 md:h-72 bg-slate-950/80 rounded-2xl mb-8 border-2 border-blue-500/30 overflow-hidden relative group-hover:border-blue-400 group-hover:shadow-[0_0_25px_rgba(59,130,246,0.25)] transition-all">
-                <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-xs font-bold text-blue-400 border border-blue-500/30 flex items-center gap-2">
-                  <Maximize className="w-3 h-3" /> Paparan 3D
-                </div>
-                {React.createElement('model-viewer', {
-                  src: app.modelUrl,
-                  alt: `Model 3D ${app.name}`,
-                  'camera-controls': true,
-                  'auto-rotate': true,
-                  'rotation-per-second': '10deg',
-                  exposure: "1.2",
-                  'environment-image': 'neutral',
-                  style: { width: '100%', height: '100%' }
-                })}
-              </div>
+                    <div class="flex flex-col gap-12 items-center w-full max-w-6xl mx-auto">
+                        <div class="reveal-item reveal-zoom relative w-full max-w-4xl" style="transition-delay: 100ms;">
+                            <div class="relative z-10 w-full aspect-video glass-panel border-2 border-orange-500/50 rounded-2xl overflow-hidden box-glow group">
+                               <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 opacity-80 -z-10"></div>
+                               <video autoplay loop muted playsinline class="w-full h-full object-cover relative z-10 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+                                  <!-- GANTIKAN PAUTAN DI BAWAH DENGAN video_pengenalan.mp4 ANDA -->
+                                  <source src="video-pengenalan.mp4" type="video/mp4" />
+                                  Pelayar anda tidak menyokong tag video ini.
+                               </video>
+                            </div>
+                        </div>
+                  
+                        <div class="grid md:grid-cols-2 gap-12 items-start w-full">
+                            <div class="reveal-item reveal-slide-left w-full" style="transition-delay: 150ms;">
+                                <div class="glass-panel p-8 rounded-3xl relative overflow-hidden h-full">
+                                    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-bl-full blur-2xl"></div>
+                                    <h3 class="text-2xl font-bold mb-4 flex items-center gap-3">
+                                        <i data-lucide="info" class="text-orange-500"></i> Apa Itu Sistem Mekanikal?
+                                    </h3>
+                                    <p class="text-slate-300 leading-relaxed mb-6">
+                                        Sistem mekanikal ialah gabungan beberapa komponen yang berfungsi untuk memindahkan daya, mengubah arah pergerakan, mengubah kelajuan pergerakan atau menghasilkan sesuatu pergerakan yang dikehendaki.
+                                    </p>
+                                    <p class="text-slate-300 leading-relaxed">
+                                        Setiap komponen mempunyai fungsi tersendiri dan bekerja secara sinergi untuk menghasilkan gerakan yang cekap bagi memudahkan kehidupan manusia.
+                                    </p>
+                                </div>
+                            </div>
+                      
+                            <div class="reveal-item reveal-slide-right space-y-6 w-full" style="transition-delay: 200ms;">
+                                <h3 class="text-xl font-bold mb-6 text-orange-400">Kepentingan Utama</h3>
+                                
+                                <div class="glass-panel p-5 rounded-2xl flex items-start gap-4 transform transition-all duration-300 hover:-translate-x-2 hover:border-orange-500/30">
+                                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                                        <span class="text-orange-500 font-bold">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg text-slate-100">Pemindahan Daya</h4>
+                                        <p class="text-sm text-slate-400 mt-1">Membantu memindahkan tenaga dan daya dengan efisien.</p>
+                                    </div>
+                                </div>
 
-              {/* Tajuk dan Ikon */}
-              <div className="flex items-center gap-4 mb-5">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                  <Settings className="w-6 h-6 animate-spin-slow" />
+                                <div class="glass-panel p-5 rounded-2xl flex items-start gap-4 transform transition-all duration-300 hover:-translate-x-2 hover:border-orange-500/30">
+                                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                                        <span class="text-orange-500 font-bold">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg text-slate-100">Beban Kerja</h4>
+                                        <p class="text-sm text-slate-400 mt-1">Memudahkan kerja manusia dalam aktiviti harian.</p>
+                                    </div>
+                                </div>
+
+                                <div class="glass-panel p-5 rounded-2xl flex items-start gap-4 transform transition-all duration-300 hover:-translate-x-2 hover:border-orange-500/30">
+                                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                                        <span class="text-orange-500 font-bold">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-lg text-slate-100">Kecekapan Tenaga</h4>
+                                        <p class="text-sm text-slate-400 mt-1">Meningkatkan kecekapan penggunaan tenaga mesin.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h3 className="text-2xl font-extrabold text-white tracking-wide">{app.name}</h3>
-              </div>
+            </section>
+
+            <!-- 3. HALAMAN KOMPONEN -->
+            <section id="komponen" class="page-section w-full">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="reveal-item reveal-fade-up text-center mb-16">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Eksplorasi <span class="text-orange-500">Komponen</span></h2>
+                        <p class="text-slate-300 mt-4 max-w-3xl mx-auto text-base md:text-lg leading-relaxed">Teruskan ke bahagian bawah untuk meneroka nota pembelajaran, memahami fungsi setiap komponen serta berinteraksi dengan model 3D dan teknologi Augmented Reality (AR) bagi pengalaman pembelajaran yang lebih interaktif.</p>
+                    </div>
               
-              {/* Senarai Komponen */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {app.parts.map(p => (
-                  <span key={p} className="text-xs md:text-sm uppercase font-bold px-3 py-1.5 bg-blue-900/40 text-blue-300 border border-blue-500/30 rounded-lg shadow-sm">
-                    {p}
-                  </span>
-                ))}
-              </div>
-              
-              {/* Penerangan (Diperbesarkan supaya lebih menyerlah) */}
-              <div className="mt-auto p-5 bg-slate-900/70 rounded-xl border-l-4 border-blue-500 shadow-inner">
-                <p className="text-base md:text-lg text-slate-100 leading-relaxed font-medium">
-                  {app.func}
-                </p>
-              </div>
-            </div>
-          </Reveal>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function GamifikasiPage() {
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-      <Reveal>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-            <Trophy className="text-yellow-500 w-10 h-10" /> Cabaran <span className="text-yellow-500">MechaVerse</span>
-          </h2>
-          <p className="text-slate-400">Pancing ikan untuk mendapatkan soalan, kemudian jawab dengan betul bagi menguji pemahaman anda tentang komponen mekanikal!</p>
-        </div>
-      </Reveal>
-
-      <Reveal delay={200}>
-        {/* Container for the embedded game with glassmorphism style */}
-        <div className="w-full h-[600px] md:h-[750px] glass-panel p-2 md:p-4 rounded-3xl border border-slate-700 relative overflow-hidden box-glow shadow-[0_0_30px_rgba(234,179,8,0.15)]">
-          <iframe 
-            src="https://quiz.zep.us/en/play/YvG1PY"
-            title="Kuiz Interaktif MechaVerse"
-            className="w-full h-full rounded-2xl bg-slate-950 border-none"
-            allow="autoplay; fullscreen; microphone; clipboard-write"
-            allowFullScreen
-          ></iframe>
-        </div>
-      </Reveal>
-    </div>
-  );
-}
-
-function CikguAIPage() {
-  const [messages, setMessages] = useState([
-    { text: "Hai! Saya Cikgu AI. Tanyakan saya apa sahaja berkaitan komponen mekanikal seperti gear, takal, atau tuil.", isBot: true }
-  ]);
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
-
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const userMsg = input;
-    setMessages(prev => [...prev, { text: userMsg, isBot: false }]);
-    setInput("");
-
-    setTimeout(() => {
-      let botResponse = "";
-      const query = userMsg.toLowerCase();
-      if (query.includes("fungsi gear") || (query.includes("apa") && query.includes("gear"))) {
-        botResponse = "Gear berfungsi untuk memindahkan gerakan putaran, mengubah arah dan kelajuan putaran, serta memindahkan kuasa dari satu aci ke aci yang lain.";
-      } else if (query.includes("takal")) {
-        botResponse = "Takal ialah roda beralur. Jika ia digunakan dengan tali, ia sangat berguna untuk mengangkat beban berat dengan mengubah arah daya tarik kita.";
-      } else if (query.includes("tuil")) {
-        botResponse = "Tuil ialah sebatang rod tegar yang berputar pada fulkrum. Ia memudahkan kerja contohnya mengumpil penutup tin logam atau menggunakan jongkang-jongket.";
-      } else if (query.includes("aci") || query.includes("galas") || query.includes("bearing")) {
-        botResponse = "Aci ialah batang silinder yang memindahkan kuasa putaran (contohnya memusingkan kipas). Galas (bearing) pula diletakkan pada aci untuk mengurangkan geseran supaya ia berputar dengan lancar.";
-      } else if (query.includes("terima kasih")) {
-        botResponse = "Sama-sama! Terus semangat belajar RBT.";
-      } else {
-        botResponse = "Soalan yang menarik. Dalam konteks komponen mekanikal Tingkatan 2, cuba fokuskan soalan pada gear, takal, tuil, aci atau galas. Ada komponen tertentu yang anda kurang jelas?";
-      }
-      setMessages(prev => [...prev, { text: botResponse, isBot: true }]);
-    }, 1000);
-  };
-
-  return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Reveal>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Tanya <span className="text-green-400">Cikgu AI</span></h2>
-          <div className="w-24 h-1 bg-green-500 mx-auto rounded-full box-glow"></div>
-          <p className="text-slate-400 mt-4">Ada soalan teknikal? Cikgu AI sedia membantu memberi penerangan tambahan.</p>
-        </div>
-      </Reveal>
-
-      <Reveal delay={200}>
-        <div className="glass-panel rounded-3xl border border-slate-700/50 overflow-hidden flex flex-col h-[500px]">
-          <div className="bg-slate-900/80 p-4 border-b border-slate-800 flex items-center gap-4">
-            <div className="relative">
-              <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-green-400" />
-              </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
-            </div>
-            <div>
-              <h3 className="font-bold text-white">Cikgu AI</h3>
-              <p className="text-xs text-green-400">Dalam Talian</p>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.isBot ? 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700' : 'bg-green-600 text-white rounded-tr-sm shadow-lg'}`}>
-                  {msg.text}
+                    <!-- Container List Komponen (Diisi via Javascript) -->
+                    <div id="komponen-container" class="space-y-16">
+                        <!-- Komponen akan dijana di sini oleh JS -->
+                    </div>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+            </section>
 
-          <form onSubmit={handleSend} className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-2">
-            <input 
-              type="text" 
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Taip soalan berkaitan mekanikal di sini..."
-              className="flex-1 bg-slate-950 border border-slate-700 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-green-500 transition-colors"
-            />
-            <button type="submit" disabled={!input.trim()} className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors">
-              <Send className="w-4 h-4 ml-1" />
-            </button>
-          </form>
+            <!-- 4. HALAMAN APLIKASI -->
+            <section id="aplikasi" class="page-section w-full">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
+                    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+              
+                    <div class="reveal-item reveal-fade-up text-center mb-16">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Aplikasi <span class="text-blue-400">Sistem Mekanikal</span></h2>
+                        <div class="w-24 h-1 bg-blue-500 mx-auto rounded-full box-glow"></div>
+                        <p class="text-slate-300 mt-4 max-w-2xl mx-auto text-lg leading-relaxed">Terokai bagaimana gabungan komponen mekanikal menghasilkan sistem yang berfungsi dengan cekap dalam pelbagai produk harian.</p>
+                    </div>
+              
+                    <div id="aplikasi-container" class="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto w-full">
+                        <!-- Aplikasi akan dijana di sini oleh JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. HALAMAN GAMIFIKASI -->
+            <section id="gamifikasi" class="page-section w-full">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+                    <div class="reveal-item reveal-fade-up text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                            <i data-lucide="trophy" class="text-yellow-500 w-10 h-10"></i> Cabaran <span class="text-yellow-500">MechaVerse</span>
+                        </h2>
+                        <p class="text-slate-400">Pancing ikan untuk mendapatkan soalan, kemudian jawab dengan betul bagi menguji pemahaman anda tentang komponen mekanikal!</p>
+                    </div>
+              
+                    <div class="reveal-item reveal-fade-up" style="transition-delay: 200ms;">
+                        <div class="w-full h-[600px] md:h-[750px] glass-panel p-2 md:p-4 rounded-3xl border border-slate-700 relative overflow-hidden box-glow shadow-[0_0_30px_rgba(234,179,8,0.15)]">
+                            <iframe 
+                                src="https://quiz.zep.us/en/play/YvG1PY"
+                                title="Kuiz Interaktif MechaVerse"
+                                class="w-full h-full rounded-2xl bg-slate-950 border-none"
+                                allow="autoplay; fullscreen; microphone; clipboard-write"
+                                allowfullscreen
+                            ></iframe>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. HALAMAN CIKGU AI -->
+            <section id="cikgu-ai" class="page-section w-full">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="reveal-item reveal-fade-up text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Tanya <span class="text-green-400">Cikgu AI</span></h2>
+                        <div class="w-24 h-1 bg-green-500 mx-auto rounded-full box-glow"></div>
+                        <p class="text-slate-400 mt-4">Ada soalan teknikal? Cikgu AI sedia membantu memberi penerangan tambahan.</p>
+                    </div>
+              
+                    <div class="reveal-item reveal-fade-up" style="transition-delay: 200ms;">
+                        <div class="glass-panel rounded-3xl border border-slate-700/50 overflow-hidden flex flex-col h-[500px]">
+                            <div class="bg-slate-900/80 p-4 border-b border-slate-800 flex items-center gap-4">
+                                <div class="relative">
+                                    <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                                        <i data-lucide="message-square" class="w-5 h-5 text-green-400"></i>
+                                    </div>
+                                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">Cikgu AI</h3>
+                                    <p class="text-xs text-green-400">Dalam Talian</p>
+                                </div>
+                            </div>
+              
+                            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                                <!-- Default Message -->
+                                <div class="flex justify-start">
+                                    <div class="max-w-[80%] p-3 rounded-2xl text-sm bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700">
+                                        Hai! Saya Cikgu AI. Tanyakan saya apa sahaja berkaitan komponen mekanikal seperti gear, takal, atau tuil.
+                                    </div>
+                                </div>
+                            </div>
+              
+                            <form id="chat-form" class="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-2">
+                                <input 
+                                    type="text" 
+                                    id="chat-input"
+                                    placeholder="Taip soalan berkaitan mekanikal di sini..."
+                                    class="flex-1 bg-slate-950 border border-slate-700 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-green-500 transition-colors"
+                                    autocomplete="off"
+                                />
+                                <button type="submit" class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-600 transition-colors">
+                                    <i data-lucide="send" class="w-4 h-4 ml-1"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. HALAMAN MAKLUMAT -->
+            <section id="maklumat" class="page-section w-full">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="reveal-item reveal-fade-up text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Maklumat <span class="text-orange-500">MechaVerse</span></h2>
+                        <div class="w-24 h-1 bg-orange-500 mx-auto rounded-full box-glow"></div>
+                    </div>
+              
+                    <div class="flex flex-col gap-10 items-center w-full max-w-4xl mx-auto">
+                        <div class="reveal-item reveal-fade-up relative w-full" style="transition-delay: 100ms;">
+                            <div class="relative z-10 w-full aspect-video glass-panel border-2 border-orange-500/50 rounded-2xl overflow-hidden box-glow group bg-slate-900/50 flex items-center justify-center">
+                               <!-- GANTIKAN PAUTAN src DI BAWAH DENGAN gambar_kumpulan.png ANDA -->
+                               <img src="ayu.png" alt="Gambar Ahli Kumpulan" class="w-full h-full object-cover relative z-10 opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
+                            </div>
+                        </div>
+                  
+                        <div class="reveal-item reveal-fade-up flex flex-col items-center text-center gap-4 w-full" style="transition-delay: 150ms;">
+                            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center box-glow">
+                                <i data-lucide="settings" class="text-white w-10 h-10 animate-spin-slow"></i>
+                            </div>
+                            <span class="font-bold text-4xl tracking-wider text-white">Mecha<span class="text-orange-500">Verse</span></span>
+                            <p class="text-slate-300 leading-relaxed text-center max-w-lg">
+                                Platform Pembelajaran Interaktif Berasaskan Web dengan Integrasi Augmented Reality bagi Topik Komponen Mekanikal.
+                            </p>
+                        </div>
+                  
+                        <div class="reveal-item reveal-fade-up glass-panel p-6 sm:p-8 rounded-3xl border border-slate-700 w-full" style="transition-delay: 200ms;">
+                            <h4 class="text-white font-bold mb-6 text-xl border-b border-slate-700 pb-3 flex items-center gap-2">
+                                <i data-lucide="info" class="w-6 h-6 text-orange-500"></i> Maklumat E-Modul
+                            </h4>
+                            <ul class="space-y-4 text-sm sm:text-base">
+                                <li class="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
+                                    <span class="text-slate-400 text-xs uppercase tracking-wider">Nama Modul</span>
+                                    <span class="font-bold text-white">MechaVerse</span>
+                                </li>
+                                <li class="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
+                                    <span class="text-slate-400 text-xs uppercase tracking-wider">Subjek</span>
+                                    <span class="font-bold text-white">Reka Bentuk dan Teknologi Tingkatan 2</span>
+                                </li>
+                                <li class="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
+                                    <span class="text-slate-400 text-xs uppercase tracking-wider">Topik</span>
+                                    <span class="font-bold text-white">Reka Bentuk Mekanikal</span>
+                                </li>
+                                <li class="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
+                                    <span class="text-slate-400 text-xs uppercase tracking-wider">Nama Penyelidik</span>
+                                    <span class="font-bold text-white leading-snug">AYU NAZIRA BINTI DZULKEFLI</span>
+                                </li>
+                                <li class="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
+                                    <span class="text-slate-400 text-xs uppercase tracking-wider">Pensyarah Penyelia</span>
+                                    <span class="font-bold text-white">DR. TANG JING RUI</span>
+                                </li>
+                                <li class="flex flex-col pt-1 gap-1">
+                                    <span class="text-slate-400 text-xs uppercase tracking-wider">Tajuk Kajian</span>
+                                    <span class="font-bold text-orange-400 leading-snug">PEMBANGUNAN "MECHANICS ILLUSTRATED E-COMIC" BERASASKAN VISUAL NARATIF UNTUK TOPIK REKA BENTUK MEKANIKAL BAGI MATA PELAJARAN REKA BENTUK DAN TEKNOLOGI TINGKATAN 2</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
-      </Reveal>
-    </div>
-  );
-}
 
-function TentangPage() {
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Reveal>
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Maklumat <span className="text-orange-500">MechaVerse</span></h2>
-          <div className="w-24 h-1 bg-orange-500 mx-auto rounded-full box-glow"></div>
-        </div>
-      </Reveal>
-
-      {/* Ruang Gambar Pasukan (.png) */}
-      <Reveal type="zoom" delay={100} className="relative w-full max-w-3xl mx-auto mb-16">
-        <div className="relative z-10 w-full aspect-video glass-panel border-2 border-orange-500/50 rounded-2xl overflow-hidden box-glow group bg-slate-900/50">
-           {/* GANTIKAN PAUTAN src DI BAWAH DENGAN gambar_kumpulan.png ANDA */}
-           <img 
-              src="ayu.png" 
-              alt="Gambar Ahli Kumpulan" 
-              className="w-full h-full object-cover relative z-10 opacity-80 group-hover:opacity-100 transition-opacity duration-500"
-           />
-        </div>
-      </Reveal>
-
-      <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <Reveal type="fade-right">
-          <div className="flex flex-col items-center text-center gap-4 mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center box-glow">
-              <Settings className="text-white w-10 h-10 animate-spin-slow" />
+        <!-- BOTTOM NAVIGATION -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-16 mb-8 relative z-20">
+            <div class="flex items-center justify-between glass-panel p-4 rounded-2xl border-slate-700/50">
+                <div id="btn-prev-container"></div>
+                
+                <!-- Page Indicator -->
+                <div id="page-indicators" class="flex gap-2 hidden sm:flex"></div>
+                
+                <div id="btn-next-container"></div>
             </div>
-            <span className="font-bold text-4xl tracking-wider text-white">Mecha<span className="text-orange-500">Verse</span></span>
-          </div>
-          <p className="text-slate-300 leading-relaxed text-center">
-            Platform Pembelajaran Interaktif Berasaskan Web dengan Integrasi Augmented Reality bagi Topik Komponen Mekanikal.
-          </p>
-        </Reveal>
+        </div>
 
-        <Reveal type="fade-left" delay={200}>
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-700">
-            <h4 className="text-white font-bold mb-6 text-xl border-b border-slate-700 pb-3 flex items-center gap-2">
-              <Info className="w-6 h-6 text-orange-500"/> Maklumat E-Modul
-            </h4>
-            <ul className="space-y-4 text-sm sm:text-base">
-              <li className="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
-                <span className="text-slate-400 text-xs uppercase tracking-wider">Nama Modul</span>
-                <span className="font-bold text-white">MechaVerse</span>
-              </li>
-              <li className="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
-                <span className="text-slate-400 text-xs uppercase tracking-wider">Subjek</span>
-                <span className="font-bold text-white">Reka Bentuk dan Teknologi Tingkatan 2</span>
-              </li>
-              <li className="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
-                <span className="text-slate-400 text-xs uppercase tracking-wider">Topik</span>
-                <span className="font-bold text-white">Reka Bentuk Mekanikal</span>
-              </li>
-              <li className="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
-                <span className="text-slate-400 text-xs uppercase tracking-wider">Nama Penyelidik</span>
-                <span className="font-bold text-white leading-snug">AYU NAZIRA BINTI DZULKEFLI</span>
-              </li>
-              <li className="flex flex-col border-b border-slate-800/50 pb-3 gap-1">
-                <span className="text-slate-400 text-xs uppercase tracking-wider">Pensyarah Penyelia</span>
-                <span className="font-bold text-white">DR. TANG JING RUI</span>
-              </li>
-              <li className="flex flex-col pt-1 gap-1">
-                <span className="text-slate-400 text-xs uppercase tracking-wider">Tajuk Kajian</span>
-                <span className="font-bold text-orange-400 leading-snug">PEMBANGUNAN "MECHANICS ILLUSTRATED E-COMIC" BERASASKAN VISUAL NARATIF UNTUK TOPIK REKA BENTUK MEKANIKAL BAGI MATA PELAJARAN REKA BENTUK DAN TEKNOLOGI TINGKATAN 2</span>
-              </li>
-            </ul>
-          </div>
-        </Reveal>
-      </div>
-    </div>
-  );
-}
+        <!-- GLOBAL FOOTER -->
+        <div class="text-center mt-12 pt-8 border-t border-slate-800/50 text-slate-500 text-sm relative z-20 pb-4">
+            <p>© 2026 MechaVerse. Hak Cipta Terpelihara.</p>
+            <div class="mt-4 text-xs leading-relaxed space-y-1 text-slate-400">
+                <p>Dibangunkan oleh Ayu Nazira binti Dzulkefli</p>
+                <p>Fakulti Teknikal Dan Vokasional</p>
+                <p>Universiti Pendidikan Sultan Idris</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- FLOATING AUDIO TOGGLE BUTTON -->
+    <button id="audio-toggle-btn" class="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-slate-800/80 backdrop-blur-md text-orange-500 border border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)] hover:bg-slate-700 hover:scale-110 transition-all duration-300">
+        <i data-lucide="volume-x" id="audio-icon" class="w-6 h-6"></i>
+    </button>
+
+    <!-- Script Aplikasi Logik -->
+    <script>
+        // --- DATA ---
+        const COMPONENTS_DATA = [
+            {
+                id: 'gear', title: 'Gear',
+                description: 'Gear ialah komponen mekanikal yang mempunyai gigi pada lilitannya. Ia digunakan untuk memindahkan kuasa dan kelajuan putaran dari satu aci ke aci yang lain.',
+                functions: ['Memindahkan kuasa dan tork mekanikal', 'Menukar arah pergerakan putaran', 'Meningkatkan atau mengurangkan kelajuan'],
+                examples: ['Kereta', 'Mesin Gerudi', 'Jam Tangan Mekanikal'],
+                modelUrl: 'gear.glb'
+            },
+            {
+                id: 'pautan', title: 'Pautan (Linkage)',
+                description: 'Komponen ini berfungsi sebagai penghubung untuk memindahkan pergerakan dari satu bahagian mesin ke bahagian yang lain secara harmoni.',
+                functions: ['Menghubungkan komponen bebas', 'Menukar satu jenis pergerakan ke pergerakan lain', 'Memindahkan daya dengan efisien'],
+                examples: ['Wiper cermin kereta', 'Lengan Robotik', 'Sistem Kunci Pintu'],
+                modelUrl: 'pautan.glb'
+            },
+            {
+                id: 'takal', title: 'Takal & Tali Sawat',
+                description: 'Takal adalah roda beralur di mana tali sawat dilalukan. Sistem ini amat berkesan memindahkan kuasa antara dua aci pada jarak yang jauh.',
+                functions: ['Memindahkan gerakan pada jarak yang jauh', 'Memudahkan beban berat diangkat', 'Beroperasi secara lebih senyap dari gear'],
+                examples: ['Mesin Jahit', 'Kren Pengangkut', 'Enjin Kenderaan'],
+                modelUrl: 'takal.glb'
+            },
+            {
+                id: 'aci_galas', title: 'Aci & Galas (Shaft & Bearing)',
+                description: 'Aci memindahkan daya putaran ke bahagian lain, manakala galas (bearing) diletakkan pada aci untuk menyokongnya dan mengurangkan geseran.',
+                functions: ['Aci memindahkan kuasa putaran paksi', 'Galas meminimumkan geseran semasa putaran', 'Menyokong integriti struktur bergerak'],
+                examples: ['Roda Basikal', 'Kipas Angin', 'Motor Elektrik'],
+                modelUrl: 'aci.glb'
+            }
+        ];
+
+        const APPLICATIONS_DATA = [
+            { name: 'Basikal', parts: ['Gear', 'Rantai', 'Sproket'], func: 'Membantu memindahkan kuasa kayuhan kepada roda belakang secara efisien untuk pergerakan.', modelUrl: 'basikal.glb' },
+            { name: 'Mesin Jahit', parts: ['Gear', 'Takal'], func: 'Menggerakkan jarum jahitan secara berterusan dengan ritma yang seragam ke atas dan ke bawah.', modelUrl: 'mesin.glb' },
+            { name: 'Pengisar', parts: ['Aci', 'Gear'], func: 'Memutarkan bilah pemotong pada kelajuan tinggi untuk memproses dan menghancurkan makanan.', modelUrl: 'pengisar.glb' },
+            { name: 'Jam Mekanikal', parts: ['Gear'], func: 'Mengawal pergerakan jarum jam dengan ketepatan tinggi melalui susunan sistem gear yang kompleks.', modelUrl: 'jam.glb' }
+        ];
+
+        const PAGE_ORDER = ['utama', 'pengenalan', 'komponen', 'aplikasi', 'gamifikasi', 'cikgu-ai', 'maklumat'];
+        let currentPage = 'utama';
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+        // --- RENDER CONTENT DINAMIK ---
+        function renderKomponen() {
+            const container = document.getElementById('komponen-container');
+            let html = '';
+            COMPONENTS_DATA.forEach((comp, index) => {
+                const delay = index * 150;
+                
+                // Construct functions HTML
+                const functionsHtml = comp.functions.map(func => `
+                    <li class="flex items-start gap-3 text-slate-300 group">
+                        <i data-lucide="chevron-right" class="w-5 h-5 text-orange-500 flex-shrink-0 transition-transform"></i>
+                        <span>${func}</span>
+                    </li>
+                `).join('');
+
+                // Construct examples HTML
+                const examplesHtml = comp.examples.map(ex => `
+                    <li class="flex items-center gap-3 text-slate-100 text-base md:text-lg font-medium">
+                        <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]"></span>
+                        ${ex}
+                    </li>
+                `).join('');
+
+                // AR Logic HTML
+                const currentUrl = encodeURIComponent(window.location.href);
+                const desktopQRHtml = `
+                    <div id="qr-${comp.id}" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex-col items-center justify-center p-6 text-center hidden">
+                        <div class="bg-white p-3 rounded-xl mb-4 shadow-[0_0_30px_rgba(249,115,22,0.3)]">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${currentUrl}" alt="QR Code AR" class="w-40 h-40" />
+                        </div>
+                        <h4 class="font-bold text-xl text-white mb-2 flex items-center justify-center gap-2">
+                            <i data-lucide="maximize" class="w-6 h-6 text-orange-500"></i> Paparan AR
+                        </h4>
+                        <p class="text-slate-300 max-w-sm mb-6 leading-relaxed text-sm">Imbas kod QR ini menggunakan kamera telefon pintar atau tablet anda untuk melihat model 3D ini dalam ruang sebenar.</p>
+                        <button onclick="toggleQR('${comp.id}', false)" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-full transition-colors border border-slate-600 text-sm">Kembali ke 3D View</button>
+                    </div>
+                `;
+
+                const arButtonHtml = isMobile 
+                    ? `<button slot="ar-button" class="pointer-events-auto px-6 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)] flex-1"><i data-lucide="maximize" class="w-4 h-4"></i> AR VIEW</button>`
+                    : `<button id="btn-ar-${comp.id}" onclick="toggleQR('${comp.id}', true)" class="pointer-events-auto px-6 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg flex-1 md:flex-none md:w-[160px] bg-slate-800/80 backdrop-blur-sm text-white hover:bg-slate-700 border border-slate-700"><i data-lucide="maximize" class="w-4 h-4"></i> AR VIEW</button>`;
+
+                html += `
+                <div class="reveal-item reveal-fade-up" style="transition-delay: ${delay}ms;">
+                    <div class="glass-panel rounded-3xl p-6 lg:p-10 border border-slate-700/50 flex flex-col gap-10 max-w-5xl mx-auto w-full">
+                        <div class="flex flex-col space-y-8 w-full">
+                            <div>
+                                <h3 class="text-4xl font-bold mb-4 text-white flex items-center gap-4">
+                                    ${comp.title}
+                                    <span class="text-xs px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30 flex items-center gap-1 font-normal tracking-wide">
+                                        <i data-lucide="maximize" class="w-3 h-3"></i> AR Sedia
+                                    </span>
+                                </h3>
+                                <p class="text-lg text-slate-300 leading-relaxed bg-slate-800/30 p-4 rounded-xl border-l-4 border-orange-500">${comp.description}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-semibold mb-4 text-orange-400 flex items-center gap-2">
+                                    <i data-lucide="settings" class="w-5 h-5"></i> Fungsi Utama
+                                </h4>
+                                <ul class="space-y-3">${functionsHtml}</ul>
+                            </div>
+                        </div>
+
+                        <div class="relative bg-slate-950/80 rounded-2xl border border-slate-700/50 overflow-hidden min-h-[450px] flex flex-col group">
+                            <div class="absolute top-4 left-4 z-10 flex gap-2">
+                                <div class="px-3 py-1 bg-black/50 backdrop-blur-md rounded-lg text-xs font-bold text-orange-400 border border-orange-500/30 animate-pulse">360° View</div>
+                            </div>
+                            
+                            <model-viewer src="${comp.modelUrl}" alt="Model 3D ${comp.title}" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate rotation-per-second="10deg" shadow-intensity="1" exposure="1.5" environment-image="neutral" style="flex-grow: 1; width: 100%; position: relative;">
+                                ${!isMobile ? desktopQRHtml : ''}
+                                <div class="absolute bottom-6 w-full flex justify-center gap-3 z-20 px-4 pointer-events-none">
+                                    <button id="btn-3d-${comp.id}" onclick="toggleQR('${comp.id}', false)" class="pointer-events-auto px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg flex-1 md:flex-none md:w-[160px] flex justify-center items-center bg-slate-800 text-white border border-orange-500/50 box-glow">3D VIEW</button>
+                                    ${arButtonHtml}
+                                </div>
+                            </model-viewer>
+
+                            <div class="bg-gradient-to-br from-slate-800/95 to-slate-900/95 p-6 border-t-2 border-orange-500/50 relative z-20 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] backdrop-blur-md">
+                                <h5 class="text-lg md:text-xl font-bold text-white mb-4 tracking-wide flex items-center gap-2">
+                                    <i data-lucide="zap" class="w-5 h-5 text-orange-500"></i> Contoh Aplikasi Sistem
+                                </h5>
+                                <ul class="flex flex-col space-y-3">${examplesHtml}</ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderAplikasi() {
+            const container = document.getElementById('aplikasi-container');
+            let html = '';
+            APPLICATIONS_DATA.forEach((app, index) => {
+                const delay = index * 150;
+                const partsHtml = app.parts.map(p => `<span class="text-xs md:text-sm uppercase font-bold px-3 py-1.5 bg-blue-900/40 text-blue-300 border border-blue-500/30 rounded-lg shadow-sm">${p}</span>`).join('');
+                
+                html += `
+                <div class="reveal-item reveal-fade-up" style="transition-delay: ${delay}ms;">
+                    <div class="glass-panel p-6 lg:p-8 rounded-3xl h-full flex flex-col group hover:bg-slate-800/80 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-2 shadow-xl border border-slate-700">
+                        <div class="w-full h-64 md:h-72 bg-slate-950/80 rounded-2xl mb-8 border-2 border-blue-500/30 overflow-hidden relative group-hover:border-blue-400 group-hover:shadow-[0_0_25px_rgba(59,130,246,0.25)] transition-all">
+                            <div class="absolute top-4 left-4 z-10 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg text-xs font-bold text-blue-400 border border-blue-500/30 flex items-center gap-2">
+                                <i data-lucide="maximize" class="w-3 h-3"></i> Paparan 3D
+                            </div>
+                            <model-viewer src="${app.modelUrl}" alt="Model 3D ${app.name}" camera-controls auto-rotate rotation-per-second="10deg" exposure="1.2" environment-image="neutral" style="width: 100%; height: 100%;"></model-viewer>
+                        </div>
+                        <div class="flex items-center gap-4 mb-5">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                                <i data-lucide="settings" class="w-6 h-6 animate-spin-slow"></i>
+                            </div>
+                            <h3 class="text-2xl font-extrabold text-white tracking-wide">${app.name}</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-6">${partsHtml}</div>
+                        <div class="mt-auto p-5 bg-slate-900/70 rounded-xl border-l-4 border-blue-500 shadow-inner">
+                            <p class="text-base md:text-lg text-slate-100 leading-relaxed font-medium">${app.func}</p>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Initialize dynamic content
+        renderKomponen();
+        renderAplikasi();
+
+        // --- INTERACTIVITY LOGIC ---
+
+        // Audio Logic with Robust Error Handling
+        const bgMusic = document.getElementById('bg-music');
+        const audioToggleBtn = document.getElementById('audio-toggle-btn');
+        const audioIcon = document.getElementById('audio-icon');
+        let isMusicPlaying = false;
+
+        function attemptPlay() {
+            const playPromise = bgMusic.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    isMusicPlaying = true;
+                    audioIcon.setAttribute('data-lucide', 'volume-2');
+                    lucide.createIcons();
+                }).catch((error) => {
+                    isMusicPlaying = false;
+                    audioIcon.setAttribute('data-lucide', 'volume-x');
+                    lucide.createIcons();
+                    console.log("Audio autoplay blocked or failed to load:", error);
+                });
+            }
+        }
+
+        // Try to play immediately (might be blocked by browser)
+        attemptPlay();
+
+        // Try to play on first user interaction if it was blocked initially
+        const firstInteraction = () => {
+            if (!isMusicPlaying) {
+                attemptPlay();
+            }
+            document.body.removeEventListener('click', firstInteraction);
+        };
+        document.body.addEventListener('click', firstInteraction, { once: true });
+
+        // Manual Audio Toggle
+        audioToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Elak dari mengganggu klik interaksi pertama
+            if (bgMusic.paused) {
+                attemptPlay();
+            } else {
+                bgMusic.pause();
+                isMusicPlaying = false;
+                audioIcon.setAttribute('data-lucide', 'volume-x');
+                lucide.createIcons();
+            }
+        });
+
+        // Custom Cursor
+        document.addEventListener('mousemove', (e) => {
+            const cursor = document.getElementById('cursor-glow');
+            cursor.style.background = `radial-gradient(600px circle at ${e.clientX}px ${e.clientY}px, rgba(249, 115, 22, 0.08), transparent 40%)`;
+        });
+
+        // Toggle QR Code for AR (Desktop)
+        window.toggleQR = function(id, showQR) {
+            const qrPanel = document.getElementById(`qr-${id}`);
+            const btn3D = document.getElementById(`btn-3d-${id}`);
+            const btnAR = document.getElementById(`btn-ar-${id}`);
+            
+            if(!qrPanel) return;
+
+            if (showQR) {
+                qrPanel.style.display = 'flex';
+                btn3D.className = "pointer-events-auto px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg flex-1 md:flex-none md:w-[160px] flex justify-center items-center bg-slate-900/80 text-slate-400 border border-slate-700 backdrop-blur-sm";
+                btnAR.className = "pointer-events-auto px-6 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg flex-1 md:flex-none md:w-[160px] bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.5)]";
+            } else {
+                qrPanel.style.display = 'none';
+                btn3D.className = "pointer-events-auto px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg flex-1 md:flex-none md:w-[160px] flex justify-center items-center bg-slate-800 text-white border border-orange-500/50 box-glow";
+                btnAR.className = "pointer-events-auto px-6 py-3 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg flex-1 md:flex-none md:w-[160px] bg-slate-800/80 backdrop-blur-sm text-white hover:bg-slate-700 border border-slate-700";
+            }
+        };
+
+        // Navigation Logic
+        window.navigateTo = function(pageId) {
+            currentPage = pageId;
+            
+            // Hide all pages, show target
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            // Close mobile menu
+            const menu = document.getElementById('mobile-menu');
+            const menuBtnIcon = document.getElementById('menu-icon');
+            menu.classList.remove('opacity-100', 'visible', 'pointer-events-auto');
+            menu.classList.add('opacity-0', 'invisible', 'pointer-events-none');
+            
+            // Re-trigger scroll animations for the new page
+            triggerReveal();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            updateBottomNav();
+        };
+
+        // Mobile Menu Toggle
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            const isOpen = menu.classList.contains('opacity-100');
+            if(isOpen){
+                menu.classList.remove('opacity-100', 'visible', 'pointer-events-auto');
+                menu.classList.add('opacity-0', 'invisible', 'pointer-events-none');
+            } else {
+                menu.classList.add('opacity-100', 'visible', 'pointer-events-auto');
+                menu.classList.remove('opacity-0', 'invisible', 'pointer-events-none');
+            }
+        });
+        document.getElementById('close-menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.remove('opacity-100', 'visible', 'pointer-events-auto');
+            menu.classList.add('opacity-0', 'invisible', 'pointer-events-none');
+        });
+
+        // Bottom Navigation Logic
+        function updateBottomNav() {
+            const currentIndex = PAGE_ORDER.indexOf(currentPage);
+            const prevPage = currentIndex > 0 ? PAGE_ORDER[currentIndex - 1] : null;
+            const nextPage = currentIndex < PAGE_ORDER.length - 1 ? PAGE_ORDER[currentIndex + 1] : null;
+
+            const prevContainer = document.getElementById('btn-prev-container');
+            if (prevPage) {
+                prevContainer.innerHTML = `<button onclick="navigateTo('${prevPage}')" class="flex items-center gap-2 px-6 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-medium"><i data-lucide="chevron-left" class="w-5 h-5"></i> Kembali</button>`;
+            } else {
+                prevContainer.innerHTML = `<div class="w-24"></div>`;
+            }
+
+            const nextContainer = document.getElementById('btn-next-container');
+            if (nextPage) {
+                nextContainer.innerHTML = `<button onclick="navigateTo('${nextPage}')" class="flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all duration-300 font-bold hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]">Seterusnya <i data-lucide="chevron-right" class="w-5 h-5"></i></button>`;
+            } else {
+                nextContainer.innerHTML = `<div class="w-32"></div>`;
+            }
+
+            const indicators = document.getElementById('page-indicators');
+            indicators.innerHTML = PAGE_ORDER.map(page => 
+                `<div class="w-2 h-2 rounded-full transition-all duration-300 ${currentPage === page ? 'w-6 bg-orange-500 box-glow' : 'bg-slate-700'}"></div>`
+            ).join('');
+            
+            // Re-render icons created dynamically
+            lucide.createIcons();
+        }
+
+        // Chatbot Logic
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        function appendMessage(text, isBot) {
+            const div = document.createElement('div');
+            div.className = `flex ${isBot ? 'justify-start' : 'justify-end'}`;
+            div.innerHTML = `
+                <div class="max-w-[80%] p-3 rounded-2xl text-sm ${isBot ? 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700' : 'bg-green-600 text-white rounded-tr-sm shadow-lg'}">
+                    ${text}
+                </div>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = chatInput.value.trim();
+            if(!text) return;
+            
+            appendMessage(text, false);
+            chatInput.value = '';
+
+            setTimeout(() => {
+                let botResponse = "";
+                const query = text.toLowerCase();
+                if (query.includes("fungsi gear") || (query.includes("apa") && query.includes("gear"))) {
+                    botResponse = "Gear berfungsi untuk memindahkan gerakan putaran, mengubah arah dan kelajuan putaran, serta memindahkan kuasa dari satu aci ke aci yang lain.";
+                } else if (query.includes("takal")) {
+                    botResponse = "Takal ialah roda beralur. Jika ia digunakan dengan tali, ia sangat berguna untuk mengangkat beban berat dengan mengubah arah daya tarik kita.";
+                } else if (query.includes("tuil")) {
+                    botResponse = "Tuil ialah sebatang rod tegar yang berputar pada fulkrum. Ia memudahkan kerja contohnya mengumpil penutup tin logam atau menggunakan jongkang-jongket.";
+                } else if (query.includes("aci") || query.includes("galas") || query.includes("bearing")) {
+                    botResponse = "Aci ialah batang silinder yang memindahkan kuasa putaran (contohnya memusingkan kipas). Galas (bearing) pula diletakkan pada aci untuk mengurangkan geseran supaya ia berputar dengan lancar.";
+                } else if (query.includes("terima kasih")) {
+                    botResponse = "Sama-sama! Terus semangat belajar RBT.";
+                } else {
+                    botResponse = "Soalan yang menarik. Dalam konteks komponen mekanikal Tingkatan 2, cuba fokuskan soalan pada gear, takal, tuil, aci atau galas. Ada komponen tertentu yang anda kurang jelas?";
+                }
+                appendMessage(botResponse, true);
+            }, 1000);
+        });
+
+        // Intersection Observer for Reveal Animations
+        function triggerReveal() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+            document.querySelectorAll('.active .reveal-item').forEach(el => {
+                el.classList.remove('is-visible'); // Reset
+                observer.observe(el);
+            });
+        }
+
+        // Initialize Everything
+        lucide.createIcons();
+        updateBottomNav();
+        setTimeout(triggerReveal, 100);
+
+    </script>
+</body>
+</html>
